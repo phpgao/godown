@@ -8,8 +8,13 @@ func main() {
 	//请求文件尝试用HEAD获取下载文件大小，测试服务器是否支持range，并判断下载类型
 	//同时，加载代理列表供后续使用
 	urls := []string{
-		"http://mirrors.ustc.edu.cn/debian/extrafiles",
-		"http://t.cn/ExmR3wK",
+		//"http://mirrors.ustc.edu.cn/debian/extrafiles",
+		//"http://mirrors.ustc.edu.cn/centos/filelist.gz",
+		//"http://gzm.com:8080/MacFamilyTree_8.3.6_WaitsUn.com.dmg",
+		//"http://gzm.com:8080/MacFamilyTree_8.3.6_WaitsUn.com.dmg",
+		//"http://gzm.com:8080/321",
+		"https://mirrors.163.com/debian-cd/9.8.0/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso",
+		//"http://iso.mirrors.ustc.edu.cn/debian-cd/9.8.0/amd64/iso-cd/debian-9.8.0-amd64-netinst.iso",
 	}
 
 	for _, url := range urls {
