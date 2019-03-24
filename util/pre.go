@@ -2,33 +2,36 @@ package util
 
 import (
 	"github.com/phpgao/godown/downloader"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"net/http"
+	"net/url"
 	"path"
 )
 
-func Download(target string, c chan int) {
-	//p1
-	//Check target url meta
-	_, _, l, url := Check(target)
+var Logger *logrus.Logger
 
-	//Init the downloader
+func Download(target string, c chan int) {
+	// p1
+	// Check target finalUrl meta
+	_, _, l, finalUrl := Check(target)
+
+	// Init the downloader
 	d := &downloader.Downloader{
-		Url:      url,
-		Filename: path.Base(url),
+		Url:      finalUrl,
+		Filename: url.QueryEscape(path.Base(finalUrl)),
 		Length:   l,
 	}
 
-	//Do the req
-	//err := d.Normal()
+	// Do the req
+	// err := d.Normal()
 	err := d.Threaded()
 	if err != nil {
-		log.Error(err)
+		Logger.Error(err)
 	}
 	c <- 1
 }
 
-//Check 检查下载地址是否满足需求
+// Check 检查下载地址是否满足需求
 func Check(url string) (Len bool, Range bool, Length int64, RUrl string) {
 	client := &http.Client{}
 	req, _ := http.NewRequest("HEAD", url, nil)
@@ -37,13 +40,13 @@ func Check(url string) (Len bool, Range bool, Length int64, RUrl string) {
 	if err != nil {
 		panic(err)
 	}
-	log.Debug(resp.Request)
-	log.Debug(resp.Request.Response)
-	log.Debug(resp.StatusCode)
-	log.Debug(resp.Request.URL)
+	Logger.Debug(resp.Request)
+	Logger.Debug(resp.Request.Response)
+	Logger.Debug(resp.StatusCode)
+	Logger.Debug(resp.Request.URL)
 	err = resp.Body.Close()
 	if err != nil {
-		log.Error(err)
+		Logger.Error(err)
 	}
 
 	if resp.ContentLength > 0 {
@@ -56,7 +59,7 @@ func Check(url string) (Len bool, Range bool, Length int64, RUrl string) {
 			Range = true
 		}
 	}
-	//log.Infof("request url = %s", resp.Request.URL.String())
+
 	RUrl = resp.Request.URL.String()
 	return
 }

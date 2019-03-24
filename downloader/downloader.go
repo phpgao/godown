@@ -1,15 +1,45 @@
 package downloader
 
 import (
+	"compress/gzip"
 	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
+	"github.com/EDDYCJY/fake-useragent"
+	"github.com/dustin/go-humanize"
+	"github.com/sirupsen/logrus"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"sync"
-	"time"
 )
+
+const (
+	HTTPPartialContent = 206
+)
+
+var Logger *logrus.Logger
+
+type WriteCounter struct {
+	Total uint64
+}
+
+func (wc *WriteCounter) Write(p []byte) (int, error) {
+	n := len(p)
+	wc.Total += uint64(n)
+	wc.PrintProgress()
+	return n, nil
+}
+
+func (wc WriteCounter) PrintProgress() {
+	// Clear the line by using a character return to go back to the start and remove
+	// the remaining characters by filling it with spaces
+	// fmt.Printf("\r%s", strings.Repeat(" ", 35))
+
+	// Return again and print current status of download
+	// We use the humanize package to print the bytes in a meaningful way (e.g. 10 MB)
+	fmt.Printf("\rDownloading... %s complete", humanize.Bytes(wc.Total))
+}
 
 type Downloader struct {
 	Filename string
@@ -19,7 +49,7 @@ type Downloader struct {
 }
 
 func (d *Downloader) Normal() error {
-	log.Info("start download" + d.Url)
+	Logger.Info("start download" + d.Url)
 	req, err := http.NewRequest("GET", d.Url, nil)
 	if err != nil {
 		return err
@@ -33,13 +63,13 @@ func (d *Downloader) Normal() error {
 	defer func() {
 		err := resp.Body.Close()
 		if err != nil {
-			log.Fatal(err)
+			Logger.Fatal(err)
 		}
 	}()
 
 	// Check server response
 	if resp.StatusCode != http.StatusOK {
-		log.Errorf("bad status: %s", resp.Status)
+		Logger.Errorf("bad status: %s", resp.Status)
 
 		return errors.New(resp.Status)
 	}
@@ -56,7 +86,7 @@ func (d *Downloader) Normal() error {
 	defer func() {
 		err := file.Close()
 		if err != nil {
-			log.Fatal(err)
+			Logger.Fatal(err)
 		}
 	}()
 
@@ -64,30 +94,31 @@ func (d *Downloader) Normal() error {
 }
 
 func (d *Downloader) Threaded() (err error) {
-	log.Infof("Begin %s", d.Url)
-	//d.Length = 101
-	log.Infof("Length %d", d.Length)
+	Logger.Infof("Begin %s", d.Url)
+	// d.Length = 101
+	Logger.Infof("Length %d", d.Length)
 	var wg sync.WaitGroup
-	//We need a max number of threads
+	// We need a max number of threads
 	var limit int64
-	limit = 10
-	//The missing part
+	limit = 3
+	// The missing part
 	remain := d.Length % limit
-	//size each thread
+	// size each thread
 	length := d.Length / limit
-	log.Infof("remain %d", remain)
-	//init file with given Content Length
-	log.Infof("Init %s", d.Filename)
-	//First Create the file
+	Logger.Infof("remain %d", remain)
+	Logger.Infof("length %d", length)
+	// init file with given Content Length
+	Logger.Infof("Init %s", d.Filename)
+	// First Create the file
 	f, err := os.Create(d.Filename)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 		return
 	}
-	log.Infof("Fill %s with %d * 0", d.Filename, d.Length)
-	//Fill it with zero
+	Logger.Infof("Fill %s with %d * 0", d.Filename, d.Length)
+	// Fill it with zero
 	if err = f.Truncate(d.Length); err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 		return
 	}
 
@@ -100,62 +131,118 @@ func (d *Downloader) Threaded() (err error) {
 		if i == limit-1 {
 			end += remain
 		}
-		//log.Infof("bytes=%d-%d", start, end-1)
+		// Logger.Infof("bytes=%d-%d", start, end-1)
 		go func(start, end, i int64) {
-			log.Infof("Thread %d begin ", i)
+			// func(start, end, i int64) {
+			// func(start, end, i int64) {
+			Logger.Infof("Thread %d begin ", i)
 			c := &http.Client{}
-			c.Timeout = time.Second * 10
+			// c.Timeout = time.Second * 10
 			req, _ := http.NewRequest("GET", d.Url, nil)
 
 			header := fmt.Sprintf("bytes=%d-%d", start, end-1)
 			req.Header.Add("Range", header)
 			req.Header.Add("Content-Type", "text/html; charset=UTF-8")
-			req.Header.Add("Connection", "chunked")
-			req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36")
-			req.Header.Add("Referer", "http://mirrors.ustc.edu.cn/")
+			// req.Header.Add("Connection", "chunked")
+			req.Header.Add("User-Agent", randomUA())
+			// req.Header.Add("Referer", "http:// mirrors.ustc.edu.cn/")
 			req.Header.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3")
-			req.Header.Add("Accept-Encoding", "gzip, deflate")
+			req.Header.Add("Accept-Encoding", "gzip")
 			req.Header.Add("DNT", "1")
 			req.Header.Add("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-			//cookie := http.Cookie{Name: "addr", Value: "222.64.193.9"}
-			//req.AddCookie(&cookie)
+
 			resp, err := c.Do(req)
 			if err != nil {
-				log.Fatal(err)
+				Logger.Fatal(err)
 			}
-			log.Debug(header)
-			log.Debug(resp.Request)
-			log.Debug(resp.Request.Response)
+			Logger.Debug(header)
+			Logger.Debug(resp.Request)
+			Logger.Debug(resp.Header)
+			Logger.Debug(resp.StatusCode)
+
+			// Download
+			if resp.StatusCode == HTTPPartialContent {
+
+			}
 			f, err := os.OpenFile(d.Filename, os.O_WRONLY, 0644)
 			if err != nil {
 				panic(err)
 			}
 
 			defer func() {
+				Logger.Debugf("task %d resp close", i)
 				err := resp.Body.Close()
 				if err != nil {
-					log.Fatal(err)
+					Logger.Fatal(err)
 				}
 			}()
 
 			defer func() {
+				Logger.Debugf("task %d file close", i)
 				err := f.Close()
 				if err != nil {
-					log.Fatal(err)
+					Logger.Fatal(err)
 				}
 			}()
 
 			if _, err := f.Seek(start, 0); err != nil {
 				panic(err)
 			}
+			var reader io.ReadCloser
+			switch resp.Header.Get("Content-Encoding") {
+			case "gzip":
+				reader, err = gzip.NewReader(resp.Body)
+				defer func() {
+					err := reader.Close()
+					if err != nil {
+						Logger.Fatal(err)
+					}
+				}()
+			default:
+				reader = resp.Body
+			}
 
-			_, err = io.Copy(f, resp.Body)
+			// _, _ = ioutil.ReadAll(resp.Body)
+			// n, err := f.Write(body)
+			counter := &WriteCounter{}
+			n, err := io.Copy(f, io.TeeReader(reader, counter))
+			// n, err := copyBuffer(f, resp.Body, nil)
+			if err != nil {
+				Logger.Error(err)
+			}
+			Logger.Debugf("task %d written %d bytes", i, n)
 
-			log.Infof("file %s,part %d done!", d.Filename, i+1)
+			Logger.Infof("file %s,task id = %d done!", d.Filename, i)
 			wg.Done()
 		}(start, end, i)
 
 	}
 	wg.Wait()
 	return
+}
+
+func getFileNameFrom(u string, header http.Header) (name string, err error) {
+	// Header first
+	if cd := header.Get("Content-Disposition"); cd != "" {
+		_, params, err := mime.ParseMediaType(`attachment;filename="foo.png"`)
+		if err != nil {
+			Logger.Warn(err)
+		}
+
+		if params["filename"] != "" {
+			name = params["filename"]
+		}
+
+	}
+
+	// Then from url,if url ends with a slash
+	//
+
+	return
+}
+
+func randomUA() string {
+	chrome := browser.Chrome()
+	Logger.Debugf("Chrome: %s", chrome)
+	return chrome
 }
