@@ -4,31 +4,32 @@ import (
 	"github.com/phpgao/godown/downloader"
 	"github.com/sirupsen/logrus"
 	"net/http"
-	"net/url"
-	"path"
 )
 
 var Logger *logrus.Logger
 
-func Download(target string, c chan int) {
+func Download(target, dir, filePath string, c chan error, l int64) {
 	// p1
-	// Check target finalUrl meta
-	_, _, l, finalUrl := Check(target)
-
+	var err error
+	Logger.Debugf("Download dir is %s", dir)
+	_, _, length, finalUrl := Check(target)
+	<-c
 	// Init the downloader
 	d := &downloader.Downloader{
 		Url:      finalUrl,
-		Filename: url.QueryEscape(path.Base(finalUrl)),
-		Length:   l,
+		Dir:      dir,
+		Filename: filePath,
+		Length:   length,
+		Limit:    l,
 	}
 
 	// Do the req
 	// err := d.Normal()
-	err := d.Threaded()
+	err = d.Threaded()
 	if err != nil {
 		Logger.Error(err)
 	}
-	c <- 1
+	c <- err
 }
 
 // Check 检查下载地址是否满足需求
@@ -38,7 +39,8 @@ func Check(url string) (Len bool, Range bool, Length int64, RUrl string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		Logger.Error(err)
+		return
 	}
 	Logger.Debug(resp.Request)
 	Logger.Debug(resp.Request.Response)

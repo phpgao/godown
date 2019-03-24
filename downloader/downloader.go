@@ -43,9 +43,11 @@ func (wc WriteCounter) PrintProgress() {
 
 type Downloader struct {
 	Filename string
+	Dir      string
 	threads  int
 	Url      string
 	Length   int64
+	Limit    int64
 }
 
 func (d *Downloader) Normal() error {
@@ -99,8 +101,8 @@ func (d *Downloader) Threaded() (err error) {
 	Logger.Infof("Length %d", d.Length)
 	var wg sync.WaitGroup
 	// We need a max number of threads
-	var limit int64
-	limit = 3
+
+	limit := d.Limit
 	// The missing part
 	remain := d.Length % limit
 	// size each thread
