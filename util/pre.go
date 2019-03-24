@@ -4,16 +4,20 @@ import (
 	"github.com/phpgao/godown/downloader"
 	"github.com/sirupsen/logrus"
 	"net/http"
+	"path/filepath"
 )
 
 var Logger *logrus.Logger
 
-func Download(target, dir, filePath string, c chan error, l int64) {
+func Download(target, dir, filePath string, c chan error, l int64, check map[string]string) {
 	// p1
 	var err error
 	Logger.Debugf("Download dir is %s", dir)
 	_, _, length, finalUrl := Check(target)
-	<-c
+	if filePath == "" {
+		filePath = filepath.Base(finalUrl)
+	}
+	//<-c
 	// Init the downloader
 	d := &downloader.Downloader{
 		Url:      finalUrl,
@@ -21,6 +25,7 @@ func Download(target, dir, filePath string, c chan error, l int64) {
 		Filename: filePath,
 		Length:   length,
 		Limit:    l,
+		Check:    check,
 	}
 
 	// Do the req

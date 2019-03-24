@@ -56,6 +56,21 @@ func main() {
 			Name:  "p, proxy",
 			Usage: "proxys",
 		},
+		cli.StringFlag{
+			Name:  "md5",
+			Value: "",
+			Usage: "md5 check, only support single file download",
+		},
+		cli.StringFlag{
+			Name:  "sha1",
+			Value: "",
+			Usage: "sha1 check, only support single file download",
+		},
+		cli.StringFlag{
+			Name:  "sha2",
+			Value: "",
+			Usage: "sha2 check, only support single file download",
+		},
 		cli.Int64Flag{
 			Name:  "c, concurrency",
 			Value: 10,
@@ -75,6 +90,7 @@ func main() {
 			Logger.Debug(urls)
 			var filePath string
 			var dir string
+			check := make(map[string]string)
 
 			if num > 1 {
 				// Multi file need a dir
@@ -94,6 +110,10 @@ func main() {
 				}
 				dir = filepath.Dir(filePath)
 				filePath = filepath.Base(filePath)
+
+				check["md5"] = c.String("md5")
+				check["sha1"] = c.String("sha1")
+				check["sha2"] = c.String("sha2")
 			}
 
 			_, err = util.CheckDir(dir)
@@ -119,7 +139,7 @@ func main() {
 			// l means limit in downloader
 			l := c.Int64("concurrency")
 			for _, url := range urls {
-				go util.Download(url, dir, filePath, workingChan, l)
+				go util.Download(url, dir, filePath, workingChan, l, check)
 			}
 
 			// p2

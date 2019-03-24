@@ -48,6 +48,8 @@ type Downloader struct {
 	Url      string
 	Length   int64
 	Limit    int64
+	Check    map[string]string
+	Computed map[string]string
 }
 
 func (d *Downloader) Normal() error {
