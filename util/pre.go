@@ -9,15 +9,17 @@ import (
 
 func Download(target string, c chan int) {
 	//p1
-
+	//Check target url meta
 	_, _, l, url := Check(target)
-	log.Error(url)
+
+	//Init the downloader
 	d := &downloader.Downloader{
 		Url:      url,
 		Filename: path.Base(url),
 		Length:   l,
 	}
 
+	//Do the req
 	//err := d.Normal()
 	err := d.Threaded()
 	if err != nil {
@@ -35,10 +37,10 @@ func Check(url string) (Len bool, Range bool, Length int64, RUrl string) {
 	if err != nil {
 		panic(err)
 	}
-	log.Info(resp.Request)
-	log.Info(resp.Request.Response)
-	log.Info(resp.StatusCode)
-	log.Info(resp.Request.URL)
+	log.Debug(resp.Request)
+	log.Debug(resp.Request.Response)
+	log.Debug(resp.StatusCode)
+	log.Debug(resp.Request.URL)
 	err = resp.Body.Close()
 	if err != nil {
 		log.Error(err)

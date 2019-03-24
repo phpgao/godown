@@ -70,7 +70,7 @@ func (d *Downloader) Threaded() (err error) {
 	var wg sync.WaitGroup
 	//We need a max number of threads
 	var limit int64
-	limit = 3
+	limit = 10
 	//The missing part
 	remain := d.Length % limit
 	//size each thread
@@ -78,13 +78,14 @@ func (d *Downloader) Threaded() (err error) {
 	log.Infof("remain %d", remain)
 	//init file with given Content Length
 	log.Infof("Init %s", d.Filename)
-
+	//First Create the file
 	f, err := os.Create(d.Filename)
 	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	log.Infof("Fill %s with %d * 0", d.Filename, d.Length)
+	//Fill it with zero
 	if err = f.Truncate(d.Length); err != nil {
 		log.Fatal(err)
 		return
@@ -106,8 +107,6 @@ func (d *Downloader) Threaded() (err error) {
 			c.Timeout = time.Second * 10
 			req, _ := http.NewRequest("GET", d.Url, nil)
 
-			log.Warn(d.Url)
-
 			header := fmt.Sprintf("bytes=%d-%d", start, end-1)
 			req.Header.Add("Range", header)
 			req.Header.Add("Content-Type", "text/html; charset=UTF-8")
@@ -124,8 +123,9 @@ func (d *Downloader) Threaded() (err error) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			log.Info(resp.Request)
-			log.Info(resp.Request.Response)
+			log.Debug(header)
+			log.Debug(resp.Request)
+			log.Debug(resp.Request.Response)
 			f, err := os.OpenFile(d.Filename, os.O_WRONLY, 0644)
 			if err != nil {
 				panic(err)
