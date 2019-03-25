@@ -12,7 +12,7 @@ type Pool struct {
 }
 
 func (p *Pool) Test(proxy url.URL, target string) (ok bool) {
-	var timeout = time.Duration(15 * time.Second)
+	var timeout = time.Duration(5 * time.Second)
 
 	client := &http.Client{
 		Transport: &http.Transport{Proxy: http.ProxyURL(&proxy)},
@@ -20,7 +20,11 @@ func (p *Pool) Test(proxy url.URL, target string) (ok bool) {
 	}
 	resp, err := client.Get(target)
 	if err != nil {
-		return ok
+		return
+	}
+
+	if resp.StatusCode != 200{
+		return
 	}
 
 	err = resp.Body.Close()

@@ -43,6 +43,8 @@ func (wc *CryptWriter) Write(p []byte) (int, error) {
 	if wc.sha2f {
 		wc.sha2d.Write(p)
 	}
+
+	return len(p),nil
 }
 
 func (wc *CryptWriter) Sum(p []byte) (int, error) {
@@ -55,4 +57,6 @@ func (wc *CryptWriter) Sum(p []byte) (int, error) {
 	if wc.sha2f {
 		wc.sha2 = string(wc.sha2d.Sum(nil)[:])
 	}
+
+	return len(p),nil
 }
