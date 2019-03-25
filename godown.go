@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/phpgao/godown/downloader"
+	"github.com/phpgao/godown/proxy"
 	"github.com/phpgao/godown/util"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -29,6 +30,7 @@ func setLogger(c *cli.Context) {
 
 	util.Logger = Logger
 	downloader.Logger = Logger
+	proxy.Logger = Logger
 }
 
 func main() {

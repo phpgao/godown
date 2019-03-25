@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"testing"
 )
@@ -19,13 +18,13 @@ func Test_Proxy(t *testing.T) {
 		},
 	}
 
-	log.Print(p.Proxies[0].Host)
+
 	c := make(chan int)
 	for _,prox :=range p.Proxies{
 
 		go func(prox url.URL, p *Pool,c chan int) {
 			fmt.Println("go")
-			if ok := p.Test(prox, "https://www.baidu.com");ok{
+			if ok := Check(prox, "https://www.baidu.com");ok{
 				t.Log("pass")
 			}else{
 				t.Error("proxy error")

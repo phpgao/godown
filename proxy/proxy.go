@@ -1,17 +1,21 @@
 package proxy
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
 )
 
+var Logger *logrus.Logger
+
 type Pool struct {
 	Proxies []url.URL
 }
 
-func (p *Pool) Test(proxy url.URL, target string) (ok bool) {
+
+func Check(proxy url.URL, target string)(ok bool){
 	var timeout = time.Duration(5 * time.Second)
 
 	client := &http.Client{
@@ -35,10 +39,11 @@ func (p *Pool) Test(proxy url.URL, target string) (ok bool) {
 	return true
 }
 
+
 func (p *Pool) add(proxy string) {
 	temp, err := url.Parse(proxy)
 	if err != nil {
-		log.Info(proxy)
+		Logger.Info(proxy)
 	}
 
 	p.Proxies = append(p.Proxies, *temp)
